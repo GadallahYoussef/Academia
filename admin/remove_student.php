@@ -29,22 +29,53 @@ if ($_SESSION['REQUEST_METHOD'] == 'POST') {
         $conn->close();
         exit;
     }
-    $remove = $conn->prepare("SELECT user_id from stdata where student_name = ? and grade = ? and section = ? LIMIT 1");
-    $remove->bind_param('sis', $name, $grade, $section);
-    $remove->execute();
-    $remove->store_result();
-    $remove->bind_result($user_id);
-    $remove->fetch();
-    $remove = $conn->prepare("DELETE FROM stdata where student_name = ? and grade = ? and section = ?");
-    $remove->bind_param("sis", $name, $grade, $section);
-    $remove->execute();
-    $remove = $conn->prepare("DELETE FROM stdssn where user_id = ?");
-    $remove->bind_param('s', $user_id);
-    $remove->execute();
-    $table_name = 'G' . "$grade" . 'S' . "$section" . "-attendence";
-    $remove = $conn->prepare("DELETE FROM $table_name WHERE user_id = ?");
-    $remove->bind_param('s', $user_id);
-    $remove->execute();
-    $remove->close();
+    $conn->begin_transaction();
+    try {
+        $remove = $conn->prepare("SELECT user_id from stdata where student_name = ? and grade = ? and section = ? LIMIT 1");
+        $remove->bind_param('sis', $name, $grade, $section);
+        if ($remove->execute()) {
+            $remove->store_result();
+            $remove->bind_result($user_id);
+            $remove->fetch();
+            $remove->close();
+        } else {
+            $remove->close();
+            throw new Exception("Failed to get the student data");
+        }
+        $remove = $conn->prepare("DELETE FROM stdata where student_name = ? and grade = ? and section = ?");
+        $remove->bind_param("sis", $name, $grade, $section);
+        if (!$remove->execute()) {
+            $remove->close();
+            throw new Exception("Failed to delete student");
+        } else {
+            $remove->close();
+        }
+        $remove = $conn->prepare("DELETE FROM stdssn where user_id = ?");
+        $remove->bind_param('s', $user_id);
+        if (!$remove->execute()) {
+            $remove->close();
+            throw new Exception("Failed to remove user's session");
+        } else {
+            $remove->close();
+        }
+        $table_name = 'G' . "$grade" . 'S' . "$section" . "-attendence";
+        $remove = $conn->prepare("DELETE FROM $table_name WHERE user_id = ?");
+        $remove->bind_param('s', $user_id);
+        if (!$remove->execute()) {
+            $remove->close();
+            throw new Exception("Failed to delete from attendence");
+        } else {
+            $conn->commit();
+            $remove->close();
+            echo json_encode(['status' => 'OK', 'message' => 'Deleted Successfully']);
+        }
+    } catch (Exception $e) {
+        $conn->rollback();
+        $conn->close();
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+} else {
     $conn->close();
+    echo json_encode(['status' => 'error', 'message' => 'Invalide Request']);
+    exit;
 }
