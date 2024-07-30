@@ -29,6 +29,21 @@
 // $section = 'a';
 // $table_name = 'G' . "$grade" . 'S' . "$section" . "-attendence";
 // echo $table_name;
-$password = 'user_password';
-$hash = password_hash($password, PASSWORD_BCRYPT); // or PASSWORD_ARGON2I
-echo $hash;
+// $password = 'user_password';
+// $hash = password_hash($password, PASSWORD_BCRYPT); // or PASSWORD_ARGON2I
+// echo $hash;
+// $name = "Youssef Mustafa Gadallah";
+// $grade = 9;
+// $section = 'a';
+// $separated_name = explode(' ', $name);
+// $first_name = $separated_name[0];
+// $second_name = $separated_name[1];
+// $student_id = uniqid('student' . "$grade" . "$section" . "_", true);
+// $suffix = (time() % 1000000);
+// $student_username = "$first_name" . "$grade" . "$section" . "_" . "$suffix";
+// echo $student_id . "<br>" . $student_username;
+
+use function PHPSTORM_META\type;
+
+$message = "هلااااااا";
+echo type($message);

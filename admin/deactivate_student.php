@@ -5,7 +5,7 @@ header('Content-Type: application/json');
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-if ($_SESSION['REQUEST_METHOD'] == 'POST') {
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     $name = $data['name'];
     $grade = $data['grade'];
@@ -30,12 +30,35 @@ if ($_SESSION['REQUEST_METHOD'] == 'POST') {
         exit;
     }
     $table_name = 'G' . "$grade" . 'S' . "$section" . "-attendence";
-    $deactve = $conn->prepare("UPDATE stdata SET status='inactive' WHERE student_name=? and grade=? and section=?");
-    $deactve->bind_param('sis', $name, $grade, $section);
-    $deactve->execute();
-    $deactve = $conn->prepare("UPDATE $table_name SET student_status='inactive' WHERE student_name=?");
-    $deactve->bind_param('s', $name);
-    $deactve->execute();
-    $deactve->close();
+    $conn->begin_transaction();
+    try {
+        $deactve = $conn->prepare("UPDATE stdata SET status='inactive' WHERE student_name=? and grade=? and section=?");
+        $deactve->bind_param('sis', $name, $grade, $section);
+        if ($deactve->execute()) {
+            $deactve->close();
+        } else {
+            $deactve->close();
+            throw new Exception("failed to update student data");
+        }
+        $deactve = $conn->prepare("UPDATE $table_name SET student_status='inactive' WHERE student_name=?");
+        $deactve->bind_param('s', $name);
+        if ($deactve->execute()) {
+            $deactve->close();
+            $conn->commit();
+            echo json_encode(['status' => 'OK', 'message' => 'deactivated successfully']);
+            exit;
+        } else {
+            $deactve->close();
+            throw new Exception("failed to deactivate from his section");
+        }
+    } catch (Exception $e) {
+        $conn->rollback();
+        $conn->close();
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+} else {
     $conn->close();
+    echo json_encode(['status' => 'error', 'message' => 'Invalid Request']);
+    exit;
 }

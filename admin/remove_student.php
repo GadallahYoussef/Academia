@@ -39,11 +39,11 @@ if ($_SESSION['REQUEST_METHOD'] == 'POST') {
     $remove->bind_param("sis", $name, $grade, $section);
     $remove->execute();
     $remove = $conn->prepare("DELETE FROM stdssn where user_id = ?");
-    $remove->bind_param('i', $user_id);
+    $remove->bind_param('s', $user_id);
     $remove->execute();
     $table_name = 'G' . "$grade" . 'S' . "$section" . "-attendence";
     $remove = $conn->prepare("DELETE FROM $table_name WHERE user_id = ?");
-    $remove->bind_param('i', $user_id);
+    $remove->bind_param('s', $user_id);
     $remove->execute();
     $remove->close();
     $conn->close();

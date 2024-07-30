@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 session_regenerate_id(true); // Regenerates the session ID and deletes the old session
                 $multi_sign = $conn->prepare("UPDATE stdssn SET session_id = ? where user_id = ?");
                 $session_id = session_id();
-                $multi_sign->bind_param('si', $session_id, $_SESSION['user_id']);
+                $multi_sign->bind_param('ss', $session_id, $_SESSION['user_id']);
                 $multi_sign->execute();
                 echo json_encode(['status' => 'success', 'message' => 'Login successful']);
             } else {
