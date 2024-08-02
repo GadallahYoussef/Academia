@@ -8,10 +8,12 @@ header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 $authenticated = false;
 $continue = check_login($conn);
-if ($continue) {
-    if ($_SESSION['status'] === 'active') {
-        $authenticated = true;
-    }
+if ($continue and $_SESSION['status'] === 'active') {
+    $authenticated = true;
+}
+function is_arabic($text)
+{
+    return preg_match('/\p{Arabic}/u', $text);
 }
 if ($authenticated) {
     $current = time();

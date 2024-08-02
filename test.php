@@ -1,49 +1,53 @@
 <?php
-// include('connection.php');
-// $gg = 1;
-// $ss = 'a';
-// $name = 'Youssef';
-// $marks = 0;
-// $schedule = $conn->prepare("SELECT day, start, end from schedule WHERE grade = ? and section = ?");
-// $schedule->bind_param('is', $gg, $ss);
-// $schedule->execute();
-// $schedule->store_result();
-// if ($schedule->num_rows > 0) {
-//     $schedule_day = [];
-//     $schedule_start = [];
-//     $schedule_end = [];
-//     $schedule->bind_result($day, $start, $end);
-//     while ($schedule->fetch()) {
-//         $schedule_day[] = $day;
-//         $schedule_start[] = $start;
-//         $schedule_end[] =  $end;
-//     }
-//     echo '<pre>';
-//     echo json_encode([
-//         'status' => 'OK', 'authenticated' => true, 'student_marks' => $marks,
-//         'student_name' => $name, 'student_grade' => $gg, 'schedule' => [$schedule_day, $schedule_start, $schedule_end]
-//     ]);
-//     echo '</pre>';
-// // }
-// $grade = 1;
-// $section = 'a';
-// $table_name = 'G' . "$grade" . 'S' . "$section" . "-attendence";
-// echo $table_name;
-// $password = 'user_password';
-// $hash = password_hash($password, PASSWORD_BCRYPT); // or PASSWORD_ARGON2I
-// echo $hash;
-// $name = "Youssef Mustafa Gadallah";
-// $grade = 9;
-// $section = 'a';
-// $separated_name = explode(' ', $name);
-// $first_name = $separated_name[0];
-// $second_name = $separated_name[1];
-// $student_id = uniqid('student' . "$grade" . "$section" . "_", true);
-// $suffix = (time() % 1000000);
-// $student_username = "$first_name" . "$grade" . "$section" . "_" . "$suffix";
-// echo $student_id . "<br>" . $student_username;
+include('connection.php');
+//header('Content-Type: application/json charset=utf-8');
+$authenticated = false;
+$grade = 1;
+$section = 'a';
+$current = time();
+function is_arabic($text)
+{
+    return preg_match('/\p{Arabic}/u', $text);
+}
+function sanitize_input($input)
+{
+    return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
+}
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $due = time() + (24 * 60 * 60);
+    $message = sanitize_input($_POST['message']);
+    $conn->begin_transaction();
+    try {
+        $push = $conn->prepare("INSERT INTO notifications (notification, grade, section, due) VALUES (?, ?, ?, ?)");
+        $push->bind_param('ssss', $message, $grade, $section, $due);
+        if ($push->execute()) {
+            $push->close();
+            $conn->commit();
+            echo json_encode(['status' => 'OK', 'message' => 'notification pushed']);
+            exit;
+        } else {
+            $push->close();
+            throw new Exception("database error");
+        }
+    } catch (Exception $e) {
+        $conn->rollback();
+        $conn->close();
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
 
-use function PHPSTORM_META\type;
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
 
-$message = "هلااااااا";
-echo type($message);
+<body>
+    <form method="post"><textarea name="message"></textarea><input type="submit"></form>
+</body>
+
+</html>
