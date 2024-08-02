@@ -1,6 +1,6 @@
 <?php
 include('connection.php');
-//header('Content-Type: application/json charset=utf-8');
+header('Content-Type: application/json charset=utf-8');
 $authenticated = false;
 $grade = 1;
 $section = 'a';
@@ -13,28 +13,39 @@ function sanitize_input($input)
 {
     return htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
 }
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $due = time() + (24 * 60 * 60);
-    $message = sanitize_input($_POST['message']);
-    $conn->begin_transaction();
-    try {
-        $push = $conn->prepare("INSERT INTO notifications (notification, grade, section, due) VALUES (?, ?, ?, ?)");
-        $push->bind_param('ssss', $message, $grade, $section, $due);
-        if ($push->execute()) {
-            $push->close();
-            $conn->commit();
-            echo json_encode(['status' => 'OK', 'message' => 'notification pushed']);
-            exit;
-        } else {
-            $push->close();
-            throw new Exception("database error");
+$notify = $conn->prepare("SELECT notification, creation from notifications WHERE ((grade=? and section =?) 
+    OR (grade='all' and section='all') OR (grade=? and section='all')) and (due > ?) ORDER BY creation");
+$notify->bind_param('isii', $grade, $section, $grade, $current);
+if ($notify->execute()) {
+    $notify->store_result();
+    if ($notify->num_rows > 0) {
+        $message = [];
+        $notify->bind_result($notification, $creation_time);
+        while ($notify->fetch()) {
+            if (is_arabic($notification)) {
+                $rtl_notification = "\u{202B}" . $notification . "\u{202C}";
+                $message[$creation_time] = $rtl_notification;
+            } else {
+                $message[$creation_time] = $notification;
+            }
         }
-    } catch (Exception $e) {
-        $conn->rollback();
+        $notify->close();
         $conn->close();
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        echo json_encode([
+            'status' => 'OK', 'authenticated' => $authenticated, 'found' => true, 'notification' => $message
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    } else {
+        $notify->close();
+        $conn->close();
+        echo json_encode(['status' => 'OK', 'authenticated' => $authenticated, 'found' => false]);
         exit;
     }
+} else {
+    $notify->close();
+    $conn->close();
+    echo json_encode(['status' => 'error', 'authenticated' => $authenticated, 'message' => 'database error']);
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -47,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </head>
 
 <body>
-    <form method="post"><textarea name="message"></textarea><input type="submit"></form>
+    <form method="post"><input type="text" name="message"><input type="submit"></form>
 </body>
 
 </html>
