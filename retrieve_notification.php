@@ -26,7 +26,12 @@ if ($authenticated) {
             $message = [];
             $notify->bind_result($notification, $creation_time);
             while ($notify->fetch()) {
-                $message[$creation_time] = $notification;
+                if (is_arabic($notification)) {
+                    $rtl_notification = "\u{202B}" . $notification . "\u{202C}";
+                    $message[$creation_time] = $rtl_notification;
+                } else {
+                    $message[$creation_time] = $notification;
+                }
             }
             $notify->close();
             $conn->close();
